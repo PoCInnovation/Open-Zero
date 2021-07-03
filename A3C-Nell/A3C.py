@@ -6,6 +6,26 @@ import torch.nn.functional as F
 import numpy as np
 from torch.distributions import Categorical
 from gym_chess import ChessEnvV1
+import threading
+import multiprocessing
+from typing import Optional
+
+import sys
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+class CategoricalMasked(Categorical):
+    
+    def __init__(self, logits: T.Tensor, mask: Optional[T.Tensor] = None):
+        self.mask = mask
+        self.batch, self.nb_action = logits.size()
+        if mask is None:
+            super(CategoricalMasked, self).__init__(logits=logits)
+        else:
+            self.mask_value = T.finfo(logits.dtype).min
+            logits.masked_fill_(~self.mask, self.mask_value)
+            super(CategoricalMasked, self).__init__(logits=logits)
 
 class SharedAdam(T.optim.Adam):
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.99), eps=1e-8,
@@ -28,11 +48,12 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
 
         self.gamma = gamma
+        self.output_dims = n_actions
 
-        self.pi1 = nn.Linear(*input_dims, 128)
-        self.v1 = nn.Linear(*input_dims, 128)
-        self.pi = nn.Linear(128, n_actions)
-        self.v = nn.Linear(128, 1)
+        self.pi1 = nn.Linear(*input_dims, 1024)
+        self.v1 = nn.Linear(*input_dims, 1024)
+        self.pi = nn.Linear(1024, n_actions)
+        self.v = nn.Linear(1024, 1)
 
         self.rewards = []
         self.actions = []
@@ -91,11 +112,14 @@ class ActorCritic(nn.Module):
     
         return total_loss
 
-    def choose_action(self, observation):
+    def choose_action(self, observation, legal_actions):
+        mask = T.zeros(self.output_dims, dtype=bool)
+        mask[legal_actions] = True
+
         state = T.tensor([observation], dtype=T.float)
         pi, v = self.forward(state)
         probs = T.softmax(pi, dim=1)
-        dist = Categorical(probs)
+        dist = CategoricalMasked(probs, mask=mask)
         action = dist.sample().numpy()[0]
 
         return action
@@ -114,17 +138,18 @@ class Agent(mp.Process):
     def run(self):
         t_step = 1
         while self.episode_idx.value < N_GAMES:
+            c = 0
             done = False
             observation = self.env.reset()
             score = 0
             self.local_actor_critic.clear_memory()
             while not done:
-                action = self.local_actor_critic.choose_action(np.array(observation).flatten())
-                print(action)
+                c += 1
+                action = self.local_actor_critic.choose_action(np.array(observation).flatten(), self.env.possible_actions)
+                #eprint(self.name, action)
                 observation_, reward, done, info = self.env.step(action)
-                print('played: ', reward, done, info)
                 score += reward
-                self.local_actor_critic.remember(observation, action, reward)
+                self.local_actor_critic.remember(np.array(observation).flatten(), action, reward)
                 if t_step % T_MAX == 0 or done:
                     loss = self.local_actor_critic.calc_loss(done)
                     self.optimizer.zero_grad()
@@ -141,19 +166,20 @@ class Agent(mp.Process):
                 observation = observation_
             with self.episode_idx.get_lock():
                 self.episode_idx.value += 1
-            print(self.name, 'episode ', self.episode_idx.value, 'reward %.1f' % score)
+            eprint(self.name, 'episode ', self.episode_idx.value, 'reward %.1f' % score, 'steps %d' % c)
 
 if __name__ == '__main__':
+    chess = True
     lr = 1e-4
-    env_id = 'ChessVsSelf-v1'
-    n_actions = 4096
-    input_dims = [64]
+    env_id = 'CartPole-v1' if chess is False else 'ChessVsSelf-v1'
+    n_actions = 2 if chess is False else 4098
+    input_dims = [4] if chess is False else [64]
     N_GAMES = 3000
     T_MAX = 5
     global_actor_critic = ActorCritic(input_dims, n_actions)
     global_actor_critic.share_memory()
-    optim = SharedAdam(global_actor_critic.parameters(), lr=lr, 
-                        betas=(0.92, 0.999))
+    #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
+    optim = T.optim.Adam(global_actor_critic.parameters(), lr)
     global_ep = mp.Value('i', 0)
 
     workers = [Agent(global_actor_critic,
