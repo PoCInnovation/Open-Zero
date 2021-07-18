@@ -55,19 +55,36 @@ class ActorCritic(nn.Module):
         self.pi = nn.Linear(256, n_actions)
         self.v = nn.Linear(256, 1)
 
-        self.rewards = []
-        self.actions = []
-        self.states = []
+        self.w_rewards = []
+        self.w_actions = []
+        self.w_states = []
 
-    def remember(self, state, action, reward):
-        self.states.append(state)
-        self.actions.append(action)
-        self.rewards.append(reward)
+        self.b_rewards = []
+        self.b_actions = []
+        self.b_states = []
+
+        self.device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+
+    def remember(self, color, state, action, reward):
+        if color == 'white':
+            self.w_states.append(state)
+            self.w_actions.append(action)
+            self.w_rewards.append(reward)
+        elif color == 'black':
+            self.b_states.append(state)
+            self.b_actions.append(action)
+            self.b_rewards.append(reward)
+        else:
+            print('remember: color unavailable')
 
     def clear_memory(self):
-        self.states = []
-        self.actions = []
-        self.rewards = []
+        self.w_states = []
+        self.w_actions = []
+        self.w_rewards = []
+
+        self.b_states = []
+        self.b_actions = []
+        self.b_rewards = []
 
     def forward(self, state):
         pi1 = F.relu(self.pi1(state))
@@ -77,27 +94,40 @@ class ActorCritic(nn.Module):
         v = self.v(v1)
         return pi, v
 
-    def calc_R(self, done):
-        states = T.tensor(self.states, dtype=T.float)
+    def calc_R(self, states, rewards, done):
+        states = T.tensor(states, dtype=T.float).to(self.device)
         #print(states)
         _, v = self.forward(states)
 
         R = v[-1]*(1-int(done))
 
         batch_return = []
-        for reward in self.rewards[::-1]:
+        for reward in rewards[::-1]:
             R = reward + self.gamma*R
             batch_return.append(R)
         batch_return.reverse()
-        batch_return = T.tensor(batch_return, dtype=T.float)
+        batch_return = T.tensor(batch_return, dtype=T.float).to(self.device)
 
         return batch_return
 
-    def calc_loss(self, done):
-        states = T.tensor(self.states, dtype=T.float)
-        actions = T.tensor(self.actions, dtype=T.float)
+    def calc_loss(self, color, done):
+        states_ = []
+        actions_ = []
+        rewards_ = []
 
-        returns = self.calc_R(done)
+        if color == 'white':
+            states_ = self.w_states
+            actions_ = self.w_actions
+            rewards_ = self.w_rewards
+        elif color == 'black':
+            states_ = self.b_states
+            actions_ = self.b_actions
+            rewards_ = self.b_rewards
+
+        states = T.tensor(states_, dtype=T.float).to(self.device)
+        actions = T.tensor(actions_, dtype=T.float).to(self.device)
+
+        returns = self.calc_R(states_, rewards_, done)
 
         pi, values = self.forward(states)
         values = values.squeeze()
@@ -116,7 +146,7 @@ class ActorCritic(nn.Module):
         mask = T.zeros(self.output_dims, dtype=bool)
         mask[legal_actions] = True
 
-        state = T.tensor([observation], dtype=T.float)
+        state = T.tensor([observation], dtype=T.float).to(self.device)
         pi, v = self.forward(state)
         probs = T.softmax(pi, dim=1)
         dist = CategoricalMasked(probs, mask=mask)
@@ -125,18 +155,16 @@ class ActorCritic(nn.Module):
         return action
 
 class Agent(mp.Process):
-    def __init__(self, w_global_actor_critic, b_global_actor_critic, w_optimizer, b_optimizer, input_dims, n_actions, 
+    def __init__(self, global_actor_critic, optimizer, input_dims, n_actions, 
                 gamma, lr, name, global_ep_idx, env_id):
         super(Agent, self).__init__()
-        self.w_local_actor_critic = ActorCritic(input_dims, n_actions, gamma)
-        self.b_local_actor_critic = ActorCritic(input_dims, n_actions, gamma)
-        self.w_global_actor_critic = w_global_actor_critic
-        self.b_global_actor_critic = b_global_actor_critic
+        self.local_actor_critic = ActorCritic(input_dims, n_actions, gamma)
+        self.global_actor_critic = global_actor_critic
         self.name = 'w%02i' % name
         self.episode_idx = global_ep_idx
         self.env = gym.make(env_id)
-        self.w_optimizer = w_optimizer
-        self.b_optimizer = b_optimizer
+        self.optimizer = optimizer
+        self.render = False
 
     def run(self):
         t_step = 1
@@ -146,60 +174,59 @@ class Agent(mp.Process):
             observation = self.env.reset()
             w_score = 0
             b_score = 0
-            self.w_local_actor_critic.clear_memory()
-            self.b_local_actor_critic.clear_memory()
+            self.local_actor_critic.clear_memory()
+            self.local_actor_critic.clear_memory()
             while not done:
                 c += 1
                 
                 # White turn
                 actions = self.env.legal_actions
-                action = self.w_local_actor_critic.choose_action(np.array(observation).flatten(), actions)
-                #eprint(self.name, action)
+                action = self.local_actor_critic.choose_action(np.array(observation).flatten(), actions)
+                #print(self.name, action)
                 observation_, reward, done, info = self.env.step(action)
                 #print(self.env.render(mode='unicode'))
                 w_score += reward
-                self.w_local_actor_critic.remember(np.array(observation).flatten(), action, reward)
+                self.local_actor_critic.remember('white', np.array(observation).flatten(), action, reward)
                 
                 # Black turn
                 if not done:
                     actions = self.env.legal_actions
-                    action = self.b_local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
+                    action = self.local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
                     observation__, reward, done, info = self.env.step(action)
                     #print(self.env.render(mode='unicode'))
                     b_score += -reward
-                    self.b_local_actor_critic.remember(np.array(observation_).flatten(), action, -reward)
+                    self.local_actor_critic.remember('black', np.array(observation_).flatten(), action, -reward)
                     
                 #print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
 
                 if t_step % T_MAX == 0 or done:
                     # White backprop
-                    loss = self.w_local_actor_critic.calc_loss(done)
-                    self.w_optimizer.zero_grad()
+                    loss = self.local_actor_critic.calc_loss('white', done)
+                    self.optimizer.zero_grad()
                     loss.backward()
                     for local_param, global_param in zip(
-                            self.w_local_actor_critic.parameters(),
-                            self.w_global_actor_critic.parameters()):
+                            self.local_actor_critic.parameters(),
+                            self.global_actor_critic.parameters()):
                         global_param._grad = local_param.grad
-                    self.w_optimizer.step()
-                    self.w_local_actor_critic.load_state_dict(
-                            self.w_global_actor_critic.state_dict())
-                    self.w_local_actor_critic.clear_memory()
+                    self.optimizer.step()
+                    self.local_actor_critic.load_state_dict(
+                            self.global_actor_critic.state_dict())
+                    self.local_actor_critic.clear_memory()
 
                     # Black backprop
-                    if self.b_local_actor_critic.states:
-                        #print(self.b_local_actor_critic.states)
-                        loss = self.b_local_actor_critic.calc_loss(done)
-                        self.b_optimizer.zero_grad()
+                    if self.local_actor_critic.b_states:
+                        #print(self.local_actor_critic.states)
+                        loss = self.local_actor_critic.calc_loss('black', done)
+                        self.optimizer.zero_grad()
                         loss.backward()
                         for local_param, global_param in zip(
-                            self.b_local_actor_critic.parameters(),
-                            self.b_global_actor_critic.parameters()):
+                            self.local_actor_critic.parameters(),
+                            self.global_actor_critic.parameters()):
                             global_param._grad = local_param.grad
-                        self.b_optimizer.step()
-                        self.b_local_actor_critic.load_state_dict(
-                            self.b_global_actor_critic.state_dict())
-                        self.b_local_actor_critic.clear_memory()
-
+                        self.optimizer.step()
+                        self.local_actor_critic.load_state_dict(
+                            self.global_actor_critic.state_dict())
+                        self.local_actor_critic.clear_memory()
 
                 t_step += 1
                 observation = observation__
@@ -215,19 +242,14 @@ if __name__ == '__main__':
     input_dims = [4] if chess is False else 7616
     N_GAMES = 3000
     T_MAX = 5
-    w_global_actor_critic = ActorCritic(input_dims, n_actions)
-    w_global_actor_critic.share_memory()
-    b_global_actor_critic = ActorCritic(input_dims, n_actions)
-    b_global_actor_critic.share_memory()
+    global_actor_critic = ActorCritic(input_dims, n_actions)
+    global_actor_critic.share_memory()
     #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
-    w_optim = T.optim.Adam(w_global_actor_critic.parameters(), lr=lr)
-    b_optim = T.optim.Adam(b_global_actor_critic.parameters(), lr=lr)
+    optim = T.optim.Adam(global_actor_critic.parameters(), lr=lr)
     global_ep = mp.Value('i', 0)
 
-    workers = [Agent(w_global_actor_critic,
-                    b_global_actor_critic,
-                    w_optim,
-                    b_optim,
+    workers = [Agent(global_actor_critic,
+                    optim,
                     input_dims,
                     n_actions,
                     gamma=0.99,
@@ -236,6 +258,7 @@ if __name__ == '__main__':
                     global_ep_idx=global_ep,
                     env_id=env_id) for i in range(mp.cpu_count())]
 
+    workers[0].render = True
     [w.start() for w in workers]
     [w.join() for w in workers]
     
