@@ -23,7 +23,8 @@ FROM nvcr.io/nvidia/cuda:11.0.3-cudnn8-runtime-ubuntu20.04
 LABEL maintainer "PocInnovation <https://github.com/PocInnovation>"
 
 # Updates
-RUN apt-get update && apt-get install -y wget libopenblas-base && apt-get clean
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y wget libopenblas-base python3 python3-pip && apt-get clean
 
 # Copying data from current repository
 WORKDIR /app
@@ -38,8 +39,4 @@ COPY --from=builder /root/stockfish /app/stockfish/stockfish
 ENV PATH /app/stockfish:$PATH
 
 # run the tester here
-RUN echo $'#!/bin/bash\n\
-ldconfig\n\
-python3 /app/tester.py "$@"' > /app/run_tester.sh \
-  && chmod +x /app/run_tester.sh
-ENTRYPOINT [ "/app/run_tester.sh" ]
+RUN ldconfig
