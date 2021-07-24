@@ -12,6 +12,8 @@ from typing import Optional
 
 import sys
 
+CUDA = False
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
@@ -63,7 +65,9 @@ class ActorCritic(nn.Module):
         self.b_actions = []
         self.b_states = []
 
-        self.device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda' if T.cuda.is_available() and CUDA == True else 'cpu')
+
+        self.to(self.device)
 
     def remember(self, color, state, action, reward):
         if color == 'white':
@@ -167,6 +171,8 @@ class Agent(mp.Process):
         self.render = False
 
     def run(self):
+        N_GAMES = 5000
+        T_MAX = 5
         t_step = 1
         while self.episode_idx.value < N_GAMES:
             c = 0
@@ -235,18 +241,19 @@ class Agent(mp.Process):
             eprint(self.name, 'episode ', self.episode_idx.value, 'w_reward %.1f' % w_score, 'b_reward %.1f' % b_score, 'steps %d' % c)
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     chess = True
     lr = 1e-4
     env_id = 'CartPole-v1' if chess is False else 'ChessAlphaZero-v0'
     n_actions = 2 if chess is False else 4672
     input_dims = [4] if chess is False else 7616
-    N_GAMES = 3000
-    T_MAX = 5
     global_actor_critic = ActorCritic(input_dims, n_actions)
     global_actor_critic.share_memory()
     #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
     optim = T.optim.Adam(global_actor_critic.parameters(), lr=lr)
     global_ep = mp.Value('i', 0)
+
+
 
     workers = [Agent(global_actor_critic,
                     optim,
