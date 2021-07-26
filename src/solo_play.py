@@ -7,7 +7,7 @@ if __name__ == '__main__':
     network = ActorCritic(7616, 4672)
     env = gym.make('ChessAlphaZero-v0')
 
-    # @TODO: load model
+    
 
     observation = env.reset()
     done = False

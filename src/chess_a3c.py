@@ -238,6 +238,8 @@ class Agent(mp.Process):
                 observation = observation__
             with self.episode_idx.get_lock():
                 self.episode_idx.value += 1
+                if self.episode_idx.value % 4000 == 0:
+                    T.save(self.global_actor_critic.state_dict(), "save.pt")
             eprint(self.name, 'episode ', self.episode_idx.value, 'w_reward %.1f' % w_score, 'b_reward %.1f' % b_score, 'steps %d' % c)
 
 if __name__ == '__main__':
@@ -248,6 +250,10 @@ if __name__ == '__main__':
     n_actions = 2 if chess is False else 4672
     input_dims = [4] if chess is False else 7616
     global_actor_critic = ActorCritic(input_dims, n_actions)
+    try:
+        global_actor_critic.load_state_dict(T.load("save.pt"))
+    except:
+        pass
     global_actor_critic.share_memory()
     #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
     optim = T.optim.Adam(global_actor_critic.parameters(), lr=lr)
