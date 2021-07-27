@@ -1,30 +1,58 @@
 # Open-Zero
-## Description
 
-Open-Zero is a research project aiming to realize the various projects of the company [DeepMind](https://github.com/deepmind):
-- AlphaGo
-- AlphaZero
-- Muzero
+## Table of Content
+
+[Introduction](#introduction)  
+[Features](#features)  
+[Installation](#installation)  
+[Quickstart](#quickstart)  
+[Contributors](#contributors)  
+
+------------
+## Introduction
+
+Open-Zero is a research project that aims to make open source implementation of [AlphaZero](https://deepmind.com/blog/article/alphazero-shedding-new-light-grand-games-chess-shogi-and-go) methods from [DeepMind](https://github.com/deepmind) on the game of chess.
 
 We use Deep Reinforcement Learning methods such as Asynchronous Advantage Actor-Crique or [A3C](https://paperswithcode.com/method/a3c).
 
-To train our model we are using on diverse environments such as chess.
-
-
 ![Schema](./.github/assets/muzero.png)
 
+------------
 ## Features
 
-WIP
+### Training
 
+The AI train by playing against itself using [A3C](https://paperswithcode.com/method/a3c) methods.
+
+### Testing
+
+We can test the AI multiple ways:
+- Watch the AI play against itself
+- Make an evaluation of a game using Stockfish
+
+------------
+## Installation
+
+### Clone Repository
+```
+git clone https://github.com/PoCInnovation/Open-Zero.git
+cd Open-Zero
+```
+
+### Install dependencies
+```
+pip3 install -r requirement.txt
+```
+
+------------
 ## Quickstart
 
+The ```launch-project.sh``` script is the tool you use to do almost everything in this project.
+Get the usage help by doing:
 ```
- git clone git@github.com:PoCInnovation/Open-Zero.git
- cd  Open-Zero
- pip3 install requirement.txt
- ./launch-project.sh -h
+./launch-project.sh -h
 ```
+------------
 ## Contributors
 
 Gino Ambigaipalan → [Github](https://github.com/Tacos69)  
