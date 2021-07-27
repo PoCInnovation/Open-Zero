@@ -17,6 +17,12 @@ We use Deep Reinforcement Learning methods such as Asynchronous Advantage Actor-
 
 ![Schema](./.github/assets/muzero.png)
 
+[A3C](https://paperswithcode.com/method/a3c) methods, unlike synchronous methods, use multithreading to get a larger amount of training data, making it faster to have promising result with the AI.
+
+The AI instanciates as much worker as possible, each of these worker work on a copy of the global network. Once a worker has finished an episode of training, it updates the global network and starts a new episode with a copy of the latest global network. This method allows a faster training, but the wider variety of training data gives it a higher quality training and better result.
+
+![Schema](./.github/assets/a3c.jpg)
+
 ------------
 ## Features
 
