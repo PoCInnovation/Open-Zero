@@ -46,13 +46,13 @@ while getopts "hs:m:" option; do
     esac
 done
 
-if [ -Z "$mode" ] then
+if [ -z "$mode" ]; then
     usage
 fi
 
-if [ "$mode" == "train" ] then
+if [ "$mode" == "train" ]; then
     train_mode
-elif [ "$mode" == "test"] then
+elif [ "$mode" == "test" ]; then
     test_mode
 else
     usage
