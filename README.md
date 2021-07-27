@@ -11,7 +11,7 @@
 ------------
 ## Introduction
 
-Open-Zero is a research project that aims to make open source implementation of [AlphaZero](https://deepmind.com/blog/article/alphazero-shedding-new-light-grand-games-chess-shogi-and-go) methods from [DeepMind](https://github.com/deepmind) on the game of chess.
+Open-Zero is a research project that aims to make open source implementation of [AlphaZero](https://deepmind.com/blog/article/alphazero-shedding-new-light-grand-games-chess-shogi-and-go) and [MuZero](https://deepmind.com/blog/article/muzero-mastering-go-chess-shogi-and-atari-without-rules) methods from [DeepMind](https://github.com/deepmind) on the game of chess.
 
 We use Deep Reinforcement Learning methods such as Asynchronous Advantage Actor-Crique or [A3C](https://paperswithcode.com/method/a3c).
 
