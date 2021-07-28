@@ -22,5 +22,9 @@ class chess_game_analyzer:
 
     async def analyse_position(self, fen_string, file_handle):
         self.board = Board(fen_string)
-        info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
-        print("fen:", fen_string, " - [", info.get("score"),"] -> ", info.get("pv"))
+
+        if self.engine == None:
+            print("No engine loaded, please use the docker image provided in the repository")
+        else:
+            info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
+            print("fen:", fen_string, " - [", info.get("score"),"] -> ", info.get("pv"))
