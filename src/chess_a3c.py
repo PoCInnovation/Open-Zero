@@ -10,6 +10,9 @@ import threading
 import multiprocessing
 from typing import Optional
 
+import asyncio
+import chess
+import chess.engine
 import sys
 
 CUDA = False
@@ -18,7 +21,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 class CategoricalMasked(Categorical):
-    
+
     def __init__(self, logits: T.Tensor, mask: Optional[T.Tensor] = None):
         self.mask = mask
         self.batch, self.nb_action = logits.size()
@@ -143,7 +146,7 @@ class ActorCritic(nn.Module):
         actor_loss = -log_probs*(returns-values)
 
         total_loss = (critic_loss + actor_loss).mean()
-    
+
         return total_loss
 
     def choose_action(self, observation, legal_actions):
@@ -159,7 +162,7 @@ class ActorCritic(nn.Module):
         return action
 
 class Agent(mp.Process):
-    def __init__(self, global_actor_critic, optimizer, input_dims, n_actions, 
+    def __init__(self, global_actor_critic, optimizer, input_dims, n_actions,
                 gamma, lr, name, global_ep_idx, env_id):
         super(Agent, self).__init__()
         self.local_actor_critic = ActorCritic(input_dims, n_actions, gamma)
@@ -184,26 +187,27 @@ class Agent(mp.Process):
             self.local_actor_critic.clear_memory()
             while not done:
                 c += 1
-                
+
                 # White turn
                 actions = self.env.legal_actions
                 action = self.local_actor_critic.choose_action(np.array(observation).flatten(), actions)
-                #print(self.name, action)
+                #print(self.env.decode(action))
                 observation_, reward, done, info = self.env.step(action)
                 #print(self.env.render(mode='unicode'))
                 w_score += reward
                 self.local_actor_critic.remember('white', np.array(observation).flatten(), action, reward)
-                
+
                 # Black turn
                 if not done:
                     actions = self.env.legal_actions
                     action = self.local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
                     observation__, reward, done, info = self.env.step(action)
+                    #print(self.name, self.env.decode(action))
                     #print(self.env.render(mode='unicode'))
                     b_score += -reward
                     self.local_actor_critic.remember('black', np.array(observation_).flatten(), action, -reward)
-                    
-                #print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
+
+                print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
 
                 if t_step % T_MAX == 0 or done:
                     # White backprop
@@ -268,4 +272,4 @@ if __name__ == '__main__':
     workers[0].render = True
     [w.start() for w in workers]
     [w.join() for w in workers]
-    
+

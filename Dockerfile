@@ -34,9 +34,9 @@ COPY . .
 RUN pip3 install -r requirements.txt
 
 # Copy Stockfish executable
-RUN mkdir /app/stockfish
-COPY --from=builder /root/stockfish /app/stockfish/stockfish
-ENV PATH /app/stockfish:$PATH
+RUN mkdir /bins
+COPY --from=builder /root/stockfish /bins/stockfish
+ENV PATH /bins:$PATH
 
 # run the tester here
 RUN ldconfig
