@@ -27,4 +27,4 @@ class chess_game_analyzer:
             print("No engine loaded, please use the docker image provided in the repository")
         else:
             info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
-            print("fen:", fen_string, " - [", info.get("score"),"] -> ", info.get("pv"))
+            print("fen:", fen_string, " - [", info.get("score"),"] -> ", info.get("pv")[0].uci)
