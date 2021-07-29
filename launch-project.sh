@@ -37,12 +37,13 @@ while getopts "hs:m:" option; do
         s)
             save=$OPTARG
             ;;
-        *)
-            usage
-            ;;
         :)
             usage
             ;;
+        *)
+            usage
+            ;;
+
     esac
 done
 
