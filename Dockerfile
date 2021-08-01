@@ -40,3 +40,4 @@ ENV PATH /bins:$PATH
 
 # run the tester here
 RUN ldconfig
+ENTRYPOINT /bin/bash

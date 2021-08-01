@@ -16,7 +16,7 @@ def get_fen_string(env):
                 nb_spaces += 1
                 continue
             if env.board[i][j] != 0 and nb_spaces != 0:
-                result.append(nb_spaces + 48)
+                result.append(str(nb_spaces))
                 nb_spaces = 0
                 continue
 
@@ -82,8 +82,7 @@ if __name__ == '__main__':
         actions = env.legal_actions
         action = network.choose_action(np.array(observation).flatten(), actions)
         observation_, reward, done, info = env.step(action)
+        print(get_fen_string(env), ";", "0.00", ";", env.decode(action))
         iteration += 1
-
-        print(env.render(mode='unicode'), '\n--------\n')
 
     print(reward, iteration)
