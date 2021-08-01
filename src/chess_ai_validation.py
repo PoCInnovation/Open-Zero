@@ -16,10 +16,8 @@ class chess_game_analyzer:
     def __del__(self):
         await self.engine.quit()
 
-    async def analyse_position(self):
-
+    def run(self):
         readable, _, _ = select.select([ sys.stdin ], [], [], 2.5)
-
         if len(readable) > 0:
             buffer = sys.stdin.read()
 
@@ -28,5 +26,12 @@ class chess_game_analyzer:
 
             self.board = chess.Board(split_buffer[0])
             info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
-            print("fen:", split_buffer[0], " -- STOCKFISH: [", info.get("score"),"] -> ", \
-            info.get("pv")[0].uci, " -- OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
+            print(split_buffer[0], "; STOCKFISH: [", info.get("score"), "] -> ", \
+            info.get("pv")[0].uci, "; OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
+
+if __name__ == "__main__":
+    analyzer = chess_game_analyzer()
+
+    while True:
+        analyzer.run()
+
