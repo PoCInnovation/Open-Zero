@@ -26,8 +26,11 @@ class chess_game_analyzer:
 
             self.board = chess.Board(split_buffer[0])
             info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
-            print(split_buffer[0], "; STOCKFISH: [", info.get("score"), "] -> ", \
-            info.get("pv")[0].uci, "; OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
+
+            uci_stockfish = info.get("pv")[0].uci
+            if uci_stockfish != split_buffer[2]:
+                print(split_buffer[0], "; STOCKFISH: [", info.get("score"), "] -> ", \
+                info.get("pv")[0].uci, "; OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
 
 if __name__ == "__main__":
     analyzer = chess_game_analyzer()
