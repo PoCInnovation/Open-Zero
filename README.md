@@ -66,8 +66,11 @@ Get the usage help by doing:
 ## Contributors
 
 Gino Ambigaipalan → [Github](https://github.com/Tacos69)
+
 Jean-Baptiste Debize → [Github](https://github.com/jeanbaptistedebize)
+
 Nell Fauveau → [Github](https://github.com/Nellousan)
+
 Bogdan Guillemoles → [Github](https://github.com/bogdzn)
 
 ------------
