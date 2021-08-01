@@ -3,23 +3,29 @@
 ## Table of Content
 
 [Introduction](#introduction)
+
 [Features](#features)
+
 [Installation](#installation)
+
 [Quickstart](#quickstart)
+
 [Contributors](#contributors)
 
 ------------
 ## Introduction
 
-Open-Zero is a research project that aims to make open source implementation of [AlphaZero](https://deepmind.com/blog/article/alphazero-shedding-new-light-grand-games-chess-shogi-and-go) and [MuZero](https://deepmind.com/blog/article/muzero-mastering-go-chess-shogi-and-atari-without-rules) methods from [DeepMind](https://github.com/deepmind) on the game of chess.
+Open-Zero is a research project that aims to make an open source implementation of [AlphaZero](https://deepmind.com/blog/article/alphazero-shedding-new-light-grand-games-chess-shogi-and-go) and [MuZero](https://deepmind.com/blog/article/muzero-mastering-go-chess-shogi-and-atari-without-rules)'s methods from [DeepMind](https://github.com/deepmind) on the game of chess.
 
 We use Deep Reinforcement Learning methods such as Asynchronous Advantage Actor-Crique or [A3C](https://paperswithcode.com/method/a3c).
 
 ![Schema](./.github/assets/muzero.png)
 
-[A3C](https://paperswithcode.com/method/a3c) methods, unlike synchronous methods, use multithreading to get a larger amount of training data, making it faster to have promising result with the AI.
+[A3C](https://paperswithcode.com/method/a3c) methods, unlike synchronous methods, use multithreading to get a larger amount of training data, making the process of having promising result with the AI faster.
 
-The AI instanciates as much workers as possible, each of these worker work on a copy of the global network. Once a worker has finished an episode of training, it updates the global network and starts a new episode with a copy of the latest global network. This method allows a faster training, but the wider variety of training data gives it a higher quality training and better result.
+The AI instanciates as much workers as possible, with each of theses workers working on a copy of the global network.
+Once a worker has finished an episode of training, it updates the global network and starts a new episode with a copy of the latest global network.
+This method allows for a faster training, but the wider variety of training data gives it a higher quality of training and a better result.
 
 ![Schema](./.github/assets/a3c.jpg)
 
@@ -60,6 +66,7 @@ Get the usage help by doing:
 
 # should be launched inside of the docker image, because the tester expects
 # the stockfish chess engine to be installed in /bins/stockfish
+cd app/
 ./launch-project.sh -h
 ```
 ------------
