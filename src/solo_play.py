@@ -5,11 +5,12 @@ import numpy as np
 
 def get_fen_string(env):
     result = []
-    nb_spaces = 0
-    pieces = ["RNBQKP"]
-    is_black = False
 
     for i in env.board:
+        nb_spaces = 0
+        pieces = ["RNBQKP"]
+        is_black = False
+
         for j in env.board[i]:
             if env.board[i][j] == 0:
                 nb_spaces += 1
@@ -30,6 +31,42 @@ def get_fen_string(env):
             result.append(to_append)
             is_black = False
         result.append('/')
+
+    result[len(result)] = 0
+    result.append(' ')
+    if env.current_player == env.BLACK:
+        result.append('b')
+    else:
+        result.append('w')
+
+    has_set_a_value = False
+    result.append(' ')
+    if env.black_king_castle_is_possible:
+        has_set_a_value = True
+        result.append('K')
+    if env.black_queen_castle_is_possible:
+        has_set_a_value = True
+        result.append('Q')
+    if env.white_king_castle_is_possible:
+        has_set_a_value = True
+        result.append('k')
+    if env.white_queen_castle_is_possible:
+        has_set_a_value = True
+        result.append('q')
+    if not has_set_a_value:
+        result.append('-')
+
+    # TODO en passant (gym-chess doesn't implement it AFAIK)
+    has_set_a_value = False
+    result.append(' - ')
+
+    # This should include the number of moves since last take, then total number
+    # of moves but gym-chess doesn't support this. it's ok because it's only used
+    # to reset clocks in classical (40 mins+ )
+    result.append(str(env.move_count))
+    result.append(' ')
+    result.append(str(env.move_count))
+
     return result
 
 
