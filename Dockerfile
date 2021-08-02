@@ -40,5 +40,5 @@ ENV PATH /bins:$PATH
 
 # run the tester here
 RUN ldconfig
-ENTRYPOINT ./launch-project.sh
+ENTRYPOINT [ "./launch-project.sh" ]
 CMD [ "-m", "train" ]
