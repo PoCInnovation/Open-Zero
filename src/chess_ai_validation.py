@@ -14,7 +14,7 @@ def get_readable_sockets(sock, client_sockets):
     total_sockets = client_sockets
 
     client_sockets.append(sock)
-    readfds, _, errorfds = select.select([ total_sockets ], [], [ total_sockets ], 0.5)
+    readfds, _, errorfds = select.select(total_sockets, [], total_sockets, 0.5)
 
     if len(errorfds) > 0:
         for e in errorfds:
@@ -38,6 +38,9 @@ async def main(sock) -> None:
             else:
                 buffer = r.recv(1024)
 
+                if not buffer:
+                    break
+
                 # Should receive FEN_STRING;EVAL;NEXT_MOVE_IN_UCI
                 split_buffer = buffer.split(';')
 
@@ -55,7 +58,7 @@ async def main(sock) -> None:
 
 if __name__ == "__main__":
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('127.0.0.1', 6969))
+    sock.bind(('', 6969))
     sock.listen(5)
 
     asyncio.set_event_loop_policy(chess.engine.EventLoopPolicy())
