@@ -51,10 +51,9 @@ git clone https://github.com/PoCInnovation/Open-Zero.git
 cd Open-Zero
 ```
 
-### Build and run the docker image
+### Build the docker image
 ```bash
 docker build . -t openzero
-docker run -it openzero /bin/bash
 ```
 
 ------------
@@ -63,11 +62,7 @@ docker run -it openzero /bin/bash
 The ```launch-project.sh``` script is the tool you use to do almost everything in this project.
 Get the usage help by doing:
 ```bash
-
-# should be launched inside of the docker image, because the tester expects
-# the stockfish chess engine to be installed in /bins/stockfish
-cd app/
-./launch-project.sh -h
+docker run openzero
 ```
 ------------
 ## Contributors
