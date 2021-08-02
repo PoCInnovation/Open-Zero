@@ -7,19 +7,25 @@ import os
 import select
 
 import sys
+import socket
 
 class chess_game_analyzer:
     def __init__(self):
         self.board = chess.Board()
         self.engine = chess.engine.SimpleEngine.popen_uci("/bins/stockfish")
 
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind('localhost', 6969)
+        self.sock.listen(5)
+
     def __del__(self):
+        self.sock.close()
         await self.engine.quit()
 
     def run(self):
-        readable, _, _ = select.select([ sys.stdin ], [], [], 2.5)
+        readable, _, _ = select.select([ self.sock ], [], [], 2.5)
         if len(readable) > 0:
-            buffer = sys.stdin.read()
+            buffer = self.sock.recv(1024)
 
             # Should receive FEN_STRING;EVAL;NEXT_MOVE_IN_UCI
             split_buffer = buffer.split(';')
@@ -36,5 +42,6 @@ if __name__ == "__main__":
     analyzer = chess_game_analyzer()
 
     while True:
+        # TODO end loop condition
         analyzer.run()
 

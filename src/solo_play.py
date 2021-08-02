@@ -1,37 +1,43 @@
 from chess_a3c import ActorCritic
 import gym
 import sys
+import socket
 import numpy as np
+
+def build_fen_line(env, i):
+    result = []
+    nb_spaces = 0
+    pieces = ["RNBQKP"]
+    is_black = False
+
+    for j in env.board[i]:
+        if env.board[i][j] == 0:
+            nb_spaces += 1
+            continue
+        if env.board[i][j] != 0 and nb_spaces != 0:
+            result.append(str(nb_spaces))
+            nb_spaces = 0
+            continue
+
+        if env.board[i][j] < 0:
+            is_black = True
+
+        piece_value = abs(env.board[i][j]) + 1
+        to_append = pieces[piece_value]
+        if is_black:
+            to_append += 32
+
+        result.append(to_append)
+        is_black = False
+        result.append('/')
+    return result
+
 
 def get_fen_string(env):
     result = []
 
     for i in env.board:
-        nb_spaces = 0
-        pieces = ["RNBQKP"]
-        is_black = False
-
-        for j in env.board[i]:
-            if env.board[i][j] == 0:
-                nb_spaces += 1
-                continue
-            if env.board[i][j] != 0 and nb_spaces != 0:
-                result.append(str(nb_spaces))
-                nb_spaces = 0
-                continue
-
-            if env.board[i][j] < 0:
-                is_black = True
-
-            piece_value = abs(env.board[i][j]) + 1
-            to_append = pieces[piece_value]
-            if is_black:
-                to_append += 32
-
-            result.append(to_append)
-            is_black = False
-        result.append('/')
-
+        result.append(build_fen_line(env, i))
     result[len(result)] = 0
     result.append(' ')
     if env.current_player == env.BLACK:
@@ -71,6 +77,8 @@ def get_fen_string(env):
 
 
 if __name__ == '__main__':
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect('localhost', 6969)
     network = ActorCritic(7616, 4672)
     env = gym.make('ChessAlphaZero-v0')
 
@@ -82,7 +90,6 @@ if __name__ == '__main__':
         actions = env.legal_actions
         action = network.choose_action(np.array(observation).flatten(), actions)
         observation_, reward, done, info = env.step(action)
-        print(get_fen_string(env), ";", "0.00", ";", env.decode(action))
+        sock.send(get_fen_string(env), ";", str(reward), ";", env.decode(action))
         iteration += 1
 
-    print(reward, iteration)
