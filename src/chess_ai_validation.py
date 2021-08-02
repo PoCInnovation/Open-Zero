@@ -2,46 +2,61 @@ import numpy as np
 import threading
 import multiprocessing
 import chess
+import chess.engine
 from typing import Optional
 import os
 import select
-
+import asyncio
 import sys
 import socket
 
-class chess_game_analyzer:
-    def __init__(self):
-        self.board = chess.Board()
-        self.engine = chess.engine.SimpleEngine.popen_uci("/bins/stockfish")
+def get_readable_sockets(sock, client_sockets):
+    total_sockets = client_sockets
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind('localhost', 6969)
-        self.sock.listen(5)
+    client_sockets.append(sock)
+    readfds, _, errorfds = select.select([ total_sockets ], [], [ total_sockets ], 0.5)
 
-    def __del__(self):
-        self.sock.close()
-        await self.engine.quit()
+    if len(errorfds) > 0:
+        for e in errorfds:
+            e.close()
+            client_sockets.pop(e)
 
-    def run(self):
-        readable, _, _ = select.select([ self.sock ], [], [], 2.5)
-        if len(readable) > 0:
-            buffer = self.sock.recv(1024)
+    return readfds
 
-            # Should receive FEN_STRING;EVAL;NEXT_MOVE_IN_UCI
-            split_buffer = buffer.split(';')
+async def main(sock) -> None:
+    _, engine = await chess.engine.popen_uci("/bins/stockfish")
+    board = chess.Board()
+    client_sockets = []
 
-            self.board = chess.Board(split_buffer[0])
-            info = self.engine.analyse(self.board, chess.engine.Limit(depth=20))
+    while not board.is_game_over():
+        readables = get_readable_sockets(sock, client_sockets)
 
-            uci_stockfish = info.get("pv")[0].uci
-            if uci_stockfish != split_buffer[2]:
-                print(split_buffer[0], "; STOCKFISH: [", info.get("score"), "] -> ", \
-                info.get("pv")[0].uci, "; OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
+        for r in readables:
+            if r == sock:
+                new_socket, _ = sock.accept()
+                client_sockets.append(new_socket)
+            else:
+                buffer = r.recv(1024)
+
+                # Should receive FEN_STRING;EVAL;NEXT_MOVE_IN_UCI
+                split_buffer = buffer.split(';')
+
+                board = chess.Board(split_buffer[0])
+                info = engine.analyse(board, chess.engine.Limit(depth=20))
+
+                uci_stockfish = info.get("pv")[0].uci
+                if uci_stockfish != split_buffer[2]:
+                    print(split_buffer[0], "; STOCKFISH: [", info.get("score"), "] -> ", \
+                    info.get("pv")[0].uci, "; OPENZERO: [ ", split_buffer[1], " ] -> ", split_buffer[2])
+
+    sock.close()
+    await engine.quit()
+
 
 if __name__ == "__main__":
-    analyzer = chess_game_analyzer()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('127.0.0.1', 6969))
+    sock.listen(5)
 
-    while True:
-        # TODO end loop condition
-        analyzer.run()
-
+    asyncio.set_event_loop_policy(chess.engine.EventLoopPolicy())
+    asyncio.run(main(sock))

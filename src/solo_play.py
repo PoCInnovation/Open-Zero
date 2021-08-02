@@ -78,7 +78,7 @@ def get_fen_string(env):
 
 if __name__ == '__main__':
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect('localhost', 6969)
+    sock.connect(('127.0.0.1', 6969))
     network = ActorCritic(7616, 4672)
     env = gym.make('ChessAlphaZero-v0')
 
