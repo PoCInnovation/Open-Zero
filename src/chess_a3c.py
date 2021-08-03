@@ -171,7 +171,10 @@ class Agent(mp.Process):
                 w_score += reward
                 self.local_actor_critic.remember('white', np.array(observation).flatten(), action, reward)
 
-                # Black turn
+                if done:
+                    self.local_actor_critic.b_rewards[len(self.local_actor_critic.b_actions) - 1] = -reward
+                    b_score += -reward
+
                 if not done:
                     actions = self.env.legal_actions
                     action = self.local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
@@ -180,10 +183,13 @@ class Agent(mp.Process):
                     #print(self.env.render(mode='unicode'))
                     b_score += -reward
                     self.local_actor_critic.remember('black', np.array(observation_).flatten(), action, -reward)
+                    if done:
+                        self.local_actor_critic.w_rewards[len(self.local_actor_critic.w_actions) - 1] = -reward
+                        w_score += -reward
 
-                print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
+                #print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
 
-                if t_step % T_MAX == 0 or done:
+                if done:
                     # White backprop
                     loss = self.local_actor_critic.calc_loss('white', done)
                     self.optimizer.zero_grad()
@@ -218,20 +224,19 @@ class Agent(mp.Process):
                 self.episode_idx.value += 1
                 if self.episode_idx.value % 4000 == 0:
                     T.save(self.global_actor_critic.state_dict(), "save.pt")
-            eprint(self.name, 'episode ', self.episode_idx.value, 'w_reward %.1f' % w_score, 'b_reward %.1f' % b_score, 'steps %d' % c)
+            eprint(self.name, 'episode ', self.episode_idx.value, 'result %.1f' % reward, 'steps %d' % c)
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
-    chess = True
     lr = 1e-4
-    env_id = 'CartPole-v1' if chess is False else 'ChessAlphaZero-v0'
-    n_actions = 2 if chess is False else 4672
-    input_dims = [4] if chess is False else 7616
+    env_id = 'ChessAlphaZero-v0'
+    n_actions = 4672
+    input_dims =  7616
     global_actor_critic = ActorCritic(input_dims, n_actions)
     try:
-        global_actor_critic.load_state_dict(T.load("save.pt"))
+        global_actor_critic.load_state_dict(T.load(sys.argv[1]))
     except:
-        pass
+        print("Error while loading model. Program will continue with a fresh model.")
     global_actor_critic.share_memory()
     #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
     optim = T.optim.Adam(global_actor_critic.parameters(), lr=lr)
