@@ -30,7 +30,15 @@ class ActorCritic(nn.Module):
         self.output_dims = n_actions
 
         self.pi1 = nn.Linear(input_dims, 256)
-        self.v1 = nn.Linear(input_dims, 256)
+        self.pi2 = nn.Linear(256, 256)
+        self.pi3 = nn.Linear(256, 256)
+        self.pi4 = nn.Linear(256, 256)
+        self.pi5 = nn.Linear(256, 256)
+        self.pi6 = nn.Linear(256, 256)
+        self.pi7 = nn.Linear(256, 256)
+        self.pi8 = nn.Linear(256, 256)
+        self.pi9 = nn.Linear(256, 256)
+        self.pi10 = nn.Linear(256, 256)
         self.pi = nn.Linear(256, n_actions)
         self.v = nn.Linear(256, 1)
 
@@ -68,11 +76,19 @@ class ActorCritic(nn.Module):
         self.b_rewards = []
 
     def forward(self, state):
-        pi1 = F.relu(self.pi1(state))
-        v1 = F.relu(self.v1(state))
+        f = F.relu(self.pi1(state))
+        f = F.relu(self.pi2(f))
+        f = F.relu(self.pi3(f))
+        f = F.relu(self.pi4(f))
+        f = F.relu(self.pi5(f))
+        f = F.relu(self.pi6(f))
+        f = F.relu(self.pi7(f))
+        f = F.relu(self.pi8(f))
+        f = F.relu(self.pi9(f))
+        f = F.relu(self.pi10(f))
 
-        pi = self.pi(pi1)
-        v = self.v(v1)
+        pi = self.pi(f)
+        v = self.v(f)
         return pi, v
 
     def calc_R(self, states, rewards, done):
