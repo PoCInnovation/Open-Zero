@@ -6,6 +6,8 @@ import socket
 import time
 import numpy as np
 
+import torch as T
+    
 if __name__ == '__main__':
     network = ActorCritic(7616, 4672)
     env = gym.make('ChessAlphaZero-v0')
@@ -15,7 +17,11 @@ if __name__ == '__main__':
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(('', 6969))
 
-
+    try:
+        network.load_state_dict(T.load(sys.argv[1]))
+    except:
+        print("Error while loading model. Program will continue with a fresh model.")
+    
     observation = env.reset()
     done = False
     reward = 0
