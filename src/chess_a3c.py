@@ -9,6 +9,8 @@ import gym_chess
 import threading
 import multiprocessing
 from typing import Optional
+from sharedadam import SharedAdam 
+from categoricalmasked import CategoricalMasked 
 
 import asyncio
 import chess
@@ -20,34 +22,6 @@ CUDA = False
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-class CategoricalMasked(Categorical):
-
-    def __init__(self, logits: T.Tensor, mask: Optional[T.Tensor] = None):
-        self.mask = mask
-        self.batch, self.nb_action = logits.size()
-        if mask is None:
-            super(CategoricalMasked, self).__init__(logits=logits)
-        else:
-            self.mask_value = T.finfo(logits.dtype).min
-            logits.masked_fill_(~self.mask, self.mask_value)
-            super(CategoricalMasked, self).__init__(logits=logits)
-
-class SharedAdam(T.optim.Adam):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.99), eps=1e-8,
-            weight_decay=0):
-        super(SharedAdam, self).__init__(params, lr=lr, betas=betas, eps=eps,
-                weight_decay=weight_decay)
-
-        for group in self.param_groups:
-            for p in group['params']:
-                state = self.state[p]
-                state['step'] = 0
-                state['exp_avg'] = T.zeros_like(p.data)
-                state['exp_avg_sq'] = T.zeros_like(p.data)
-
-                state['exp_avg'].share_memory_()
-                state['exp_avg_sq'].share_memory_()
-
 class ActorCritic(nn.Module):
     def __init__(self, input_dims, n_actions, gamma=0.99):
         super(ActorCritic, self).__init__()
@@ -56,7 +30,15 @@ class ActorCritic(nn.Module):
         self.output_dims = n_actions
 
         self.pi1 = nn.Linear(input_dims, 256)
-        self.v1 = nn.Linear(input_dims, 256)
+        self.pi2 = nn.Linear(256, 256)
+        self.pi3 = nn.Linear(256, 256)
+        self.pi4 = nn.Linear(256, 256)
+        self.pi5 = nn.Linear(256, 256)
+        self.pi6 = nn.Linear(256, 256)
+        self.pi7 = nn.Linear(256, 256)
+        self.pi8 = nn.Linear(256, 256)
+        self.pi9 = nn.Linear(256, 256)
+        self.pi10 = nn.Linear(256, 256)
         self.pi = nn.Linear(256, n_actions)
         self.v = nn.Linear(256, 1)
 
@@ -94,11 +76,19 @@ class ActorCritic(nn.Module):
         self.b_rewards = []
 
     def forward(self, state):
-        pi1 = F.relu(self.pi1(state))
-        v1 = F.relu(self.v1(state))
+        f = F.relu(self.pi1(state))
+        f = F.relu(self.pi2(f))
+        f = F.relu(self.pi3(f))
+        f = F.relu(self.pi4(f))
+        f = F.relu(self.pi5(f))
+        f = F.relu(self.pi6(f))
+        f = F.relu(self.pi7(f))
+        f = F.relu(self.pi8(f))
+        f = F.relu(self.pi9(f))
+        f = F.relu(self.pi10(f))
 
-        pi = self.pi(pi1)
-        v = self.v(v1)
+        pi = self.pi(f)
+        v = self.v(f)
         return pi, v
 
     def calc_R(self, states, rewards, done):
@@ -197,19 +187,29 @@ class Agent(mp.Process):
                 w_score += reward
                 self.local_actor_critic.remember('white', np.array(observation).flatten(), action, reward)
 
-                # Black turn
+                if done:
+                    self.local_actor_critic.b_rewards[len(self.local_actor_critic.b_actions) - 1] = -reward
+                    b_score += -reward
+
+                observation = observation_
+
                 if not done:
                     actions = self.env.legal_actions
-                    action = self.local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
-                    observation__, reward, done, info = self.env.step(action)
+                    action = self.local_actor_critic.choose_action(np.array(observation).flatten(), actions)
+                    observation_, reward, done, info = self.env.step(action)
                     #print(self.name, self.env.decode(action))
                     #print(self.env.render(mode='unicode'))
                     b_score += -reward
                     self.local_actor_critic.remember('black', np.array(observation_).flatten(), action, -reward)
+                    if done:
+                        self.local_actor_critic.w_rewards[len(self.local_actor_critic.w_actions) - 1] = -reward
+                        w_score += -reward
+                    observation = observation_
+                    
 
-                print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
+                #print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
 
-                if t_step % T_MAX == 0 or done:
+                if done:
                     # White backprop
                     loss = self.local_actor_critic.calc_loss('white', done)
                     self.optimizer.zero_grad()
@@ -239,25 +239,23 @@ class Agent(mp.Process):
                         self.local_actor_critic.clear_memory()
 
                 t_step += 1
-                observation = observation__
             with self.episode_idx.get_lock():
                 self.episode_idx.value += 1
                 if self.episode_idx.value % 4000 == 0:
                     T.save(self.global_actor_critic.state_dict(), "save.pt")
-            eprint(self.name, 'episode ', self.episode_idx.value, 'w_reward %.1f' % w_score, 'b_reward %.1f' % b_score, 'steps %d' % c)
+            eprint(self.name, 'episode ', self.episode_idx.value, 'result %.1f' % reward, 'steps %d' % c)
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
-    chess = True
     lr = 1e-4
-    env_id = 'CartPole-v1' if chess is False else 'ChessAlphaZero-v0'
-    n_actions = 2 if chess is False else 4672
-    input_dims = [4] if chess is False else 7616
+    env_id = 'ChessAlphaZero-v0'
+    n_actions = 4672
+    input_dims =  7616
     global_actor_critic = ActorCritic(input_dims, n_actions)
     try:
-        global_actor_critic.load_state_dict(T.load("save.pt"))
+        global_actor_critic.load_state_dict(T.load(sys.argv[1]))
     except:
-        pass
+        print("Error while loading model. Program will continue with a fresh model.")
     global_actor_critic.share_memory()
     #optim = SharedAdam(global_actor_critic.parameters(), lr=lr, betas=(0.92, 0.999))
     optim = T.optim.Adam(global_actor_critic.parameters(), lr=lr)
