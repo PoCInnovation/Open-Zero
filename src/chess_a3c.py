@@ -191,10 +191,12 @@ class Agent(mp.Process):
                     self.local_actor_critic.b_rewards[len(self.local_actor_critic.b_actions) - 1] = -reward
                     b_score += -reward
 
+                observation = observation_
+
                 if not done:
                     actions = self.env.legal_actions
-                    action = self.local_actor_critic.choose_action(np.array(observation_).flatten(), actions)
-                    observation__, reward, done, info = self.env.step(action)
+                    action = self.local_actor_critic.choose_action(np.array(observation).flatten(), actions)
+                    observation_, reward, done, info = self.env.step(action)
                     #print(self.name, self.env.decode(action))
                     #print(self.env.render(mode='unicode'))
                     b_score += -reward
@@ -202,6 +204,8 @@ class Agent(mp.Process):
                     if done:
                         self.local_actor_critic.w_rewards[len(self.local_actor_critic.w_actions) - 1] = -reward
                         w_score += -reward
+                    observation = observation_
+                    
 
                 #print('curr white score:', w_score, 'curr black score:', b_score, 'agent id:', self.name)
 
@@ -235,7 +239,6 @@ class Agent(mp.Process):
                         self.local_actor_critic.clear_memory()
 
                 t_step += 1
-                observation = observation__
             with self.episode_idx.get_lock():
                 self.episode_idx.value += 1
                 if self.episode_idx.value % 4000 == 0:
