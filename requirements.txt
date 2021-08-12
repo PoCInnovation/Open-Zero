@@ -2,3 +2,4 @@ gym==0.17.3
 gym-chess==0.1.1
 torch==1.9.0
 chess==1.6
+pygame==2.0.1
