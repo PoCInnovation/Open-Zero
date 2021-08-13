@@ -12,15 +12,14 @@ def analyse(fen_str, engine):
     return info["pv"][0]
 
 if __name__ == '__main__':
-    print('[LOG] Setting up instance...')
     network = ActorCritic(7616, 4672)
     env = gym.make('ChessAlphaZero-v0')
+    engine = chess.engine.SimpleEngine.popen_uci("/bins/stockfish")
     try:
         network.load_state_dict(T.load(sys.argv[1]))
     except:
         print("[WARNING] Error while loading model. Program will continue with a fresh model.")
     observation = env.reset()
-    engine = chess.engine.SimpleEngine.popen_uci("/bins/stockfish")
     while not env.env.env._board.is_game_over():
         fen = env.env.env._board.fen()
         action = network.choose_action(np.array(observation).flatten(), env.legal_actions)
