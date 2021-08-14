@@ -23,8 +23,7 @@ train_mode ()
 
 test_mode ()
 {
-    python3 src/chess_ai_validation.py &
-    python3 src/solo_play.py ${save}
+    python3 src/tester.py ${save}
 }
 
 while getopts "hs:m:" option; do
