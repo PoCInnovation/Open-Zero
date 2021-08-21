@@ -46,7 +46,7 @@ class Board:
     def menu(self, g):
         mytheme = pygame_menu.themes.THEME_DARK.copy()
         myimage = pygame_menu.baseimage.BaseImage(
-                image_path="/home/jbdeb/Desktop/index.jpg")
+                image_path="src/gui/assets/menu.jpg")
         mytheme.background_color = myimage
         menu = pygame_menu.Menu('Welcome to OpenZero GUI', self.width, self.height, theme=mytheme)
         menu.add.button('Play', start_game, g)
@@ -106,6 +106,10 @@ class Board:
             i += 1
         return None
 
+    def sound_move(self):
+        soundObj = pygame.mixer.Sound('src/gui/assets/chess_move.wav')
+        soundObj.play()
+
     def wait_for_input(self, board, env_actions, env):
         decodes = []
         done = False
@@ -121,6 +125,7 @@ class Board:
                     t = self.move_piece(decodes, (x, y))
                     if (t):
                         board.push_uci(current_target + piece_uci)
+                        self.sound_move()
                         return env_actions[ array_places[t - 1]]
                     decodes = []
                 current_target = piece_uci
