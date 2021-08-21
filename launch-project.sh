@@ -26,6 +26,11 @@ test_mode ()
     python3 src/tester.py ${save}
 }
 
+play_mode ()
+{
+    python3 src/ai_self_play.py ${save}
+}
+
 while getopts "hs:m:" option; do
     case ${option} in
         h) usage ;;
@@ -39,6 +44,7 @@ esac done
 case ${mode} in
     "train") train_mode ;;
     "test") test_mode ;;
+    "play_vs") play_mode ;;
     *) usage ;;
 esac
 
