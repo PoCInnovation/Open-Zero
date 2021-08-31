@@ -1,6 +1,7 @@
 import gui.board
 from chess_a3c import ActorCritic
 import gym
+import gym_chess
 import chess
 import numpy as np
 
